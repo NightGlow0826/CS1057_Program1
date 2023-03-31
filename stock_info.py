@@ -11,6 +11,7 @@ import re
 import time
 
 import bs4
+import numpy as np
 import pandas as pd
 from tqdm.contrib import tzip
 import heapq
@@ -26,9 +27,11 @@ from akshare import stock_zh_a_hist
 # import akshare as ak
 from tqdm import *
 import args
+from pywebio.output import put_html
 
 from pyecharts import options as opts
-from pyecharts.charts import Map, Page, Bar, Line
+from pyecharts.charts import Map, Page, Bar, Line, Kline, Grid
+from pyecharts.commons.utils import JsCode
 
 
 class StockInfo:
@@ -48,6 +51,15 @@ class StockInfo:
                     -previous:, 0]
         return list(hist_data)
 
+    def code2cn_name(self, code: str):
+        rep = requests.get(f'http://quote.eastmoney.com/sh{code}.html')
+        rep.encoding = 'utf-8'
+        bs = bs4.BeautifulSoup(rep.text, 'lxml')
+
+        a = bs.find_all('div', {"class": 'quote_title_l'})[0]
+        name = a.find_all_next('span')[0].text
+        return name
+
     @property
     def area_df(self):
         """
@@ -57,13 +69,13 @@ class StockInfo:
 
         area_df = pd.DataFrame(columns=['area', 'A', 'AB', 'B'])
 
-        # rep = requests.get(self.area_classify_link, headers=args.headers_area)
-        # rep.encoding = 'utf-8'
-        # text = rep.text
-        # text = repr(text).replace(r'\n', '').replace(r'\t', '').replace(' ', '').replace(r'\r', '').replace(r'\\', '')
-        #
-        # with open('dust/1.txt', 'w+', encoding='utf-8') as f:
-        #     f.write(text)
+        rep = requests.get(self.area_classify_link, headers=args.headers_area)
+        rep.encoding = 'utf-8'
+        text = rep.text
+        text = repr(text).replace(r'\n', '').replace(r'\t', '').replace(' ', '').replace(r'\r', '').replace(r'\\', '')
+
+        with open('dust/1.txt', 'w+', encoding='utf-8') as f:
+            f.write(text)
 
         with open('dust/1.txt', 'r', encoding='utf-8') as f:
             rep = f.read()
@@ -103,8 +115,9 @@ class StockInfo:
                      is_map_symbol_show=False)
                 .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
                 .set_global_opts(
-                title_opts=opts.TitleOpts(title="A股各省份发行数量", is_show=True),
-                visualmap_opts=opts.VisualMapOpts(max_=80, is_show=True, pos_left='300', pos_bottom='60'),
+                title_opts=opts.TitleOpts(title="A SHARE DISTRIBUTION", is_show=True),
+                visualmap_opts=opts.VisualMapOpts(max_=80, is_show=True, pos_left='200', pos_bottom='250', ),
+                datazoom_opts=opts.DataZoomOpts(is_zoom_lock=True)
 
             )
 
@@ -114,16 +127,6 @@ class StockInfo:
 
         return c
 
-    def cover_maker(self):
-        # page = Page(layout=Page.DraggablePageLayout)
-        # page.add(s.area_chart, s.area_chart)
-        # page.render('temp.html')
-        # quit()
-
-        # page.save_resize_html("temp.html",
-        #                       cfg_file="cover_config.json",
-        #                       dest="cover.html")
-        pass
 
     @property
     def rough_industry_df(self):
@@ -160,7 +163,8 @@ class StockInfo:
             columns=['href', 'industry', 'industry_code', 'share_num', 'total_value', 'ave_pe', 'ave_price'])
         if self.fine_update:
             self.driver.get(self.industry_classify_link)
-            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, r'/html/body/div[9]/div/div[2]/div/div[1]/div[1]/table/tbody[2]/tr[1]/td[2]')))
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                (By.XPATH, r'/html/body/div[9]/div/div[2]/div/div[1]/div[1]/table/tbody[2]/tr[1]/td[2]')))
             page_source = self.driver.page_source
             with open('fine.html', 'w+', encoding='utf-8') as f:
                 f.write(page_source)
@@ -259,8 +263,9 @@ class StockInfo:
 
     @property
     def historical_macro_df(self):
+        # 应该多返回一些
         a_macro_df = pd.DataFrame(columns=['date', 'total', 'total_l', 'vol', 'amount', 'pe', 'turnover', 'turnover_l'])
-        date_list = self.hist_date_list(previous=7)
+        date_list = self.hist_date_list(previous=50)
         # date_list = ['2023-03-30']
         self.driver.get(self.historical_link_base + r'day/')
         js = r'document.getElementsByClassName("form-control sse_input")[0].removeAttribute("readonly");'
@@ -274,16 +279,14 @@ class StockInfo:
             date_input_frame = self.driver.find_element(By.CLASS_NAME, r"form-control.sse_input")
             date_input_frame.clear()
             date_input_frame.send_keys(date)
-            # time.sleep(3)
 
             date_input_frame.click()
-            # time.sleep(3)
-            # date_input_frame.send_keys(Keys.ENTER)
+
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, r"laydate-btns-confirm")))
             confirm_button = self.driver.find_element(By.CLASS_NAME, r'laydate-btns-confirm')
             confirm_button.click()
-            time.sleep(2)
+            time.sleep(1)
             page_source = self.driver.page_source
             bs = bs4.BeautifulSoup(page_source, "lxml")
             tbody = bs.find('tbody')
@@ -301,9 +304,9 @@ class StockInfo:
 
         return a_macro_df
 
-    def draw_macro(self, render=False):
-        df = pd.read_csv('macro_hist.csv', index_col=0)
-        print(df)
+    def draw_macro(self, render=True, previous=7):
+        df = pd.read_csv('macro_hist.csv', index_col=0)[-previous:]
+        # print(df)
         c = (
             Line()
                 .add_xaxis(list(df['date']))
@@ -312,6 +315,7 @@ class StockInfo:
                 .add_yaxis("Amount(百亿)", list(round(df['amount'] / 1e2, 2)),
                            )
                 .add_yaxis("市盈率", df['pe'],
+                           is_selected=False
                            )
                 .add_yaxis(
                 "换手率",
@@ -321,10 +325,17 @@ class StockInfo:
                 "流通换手率",
                 df['turnover_l'],
             )
-                .set_global_opts(title_opts=opts.TitleOpts(title="Overview"))
+                .set_global_opts(title_opts=opts.TitleOpts(title="Overview"),
+                                 datazoom_opts=[opts.DataZoomOpts(range_start=0, range_end=100),
+                                                opts.DataZoomOpts(type_="inside")],
+                                 xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-60)),
+                                 yaxis_opts=opts.AxisOpts(is_scale=True)
+                                 )
         )
         if render:
             c.render("./basic_html/macro_hist.html")
+        else:
+            return c
 
     def industry_df_list(self, industry: str = 'A01', previous=7):
         industry_df = pd.read_csv(f'fine_field_csv_folder/{industry}.csv', index_col=0)
@@ -333,9 +344,18 @@ class StockInfo:
         # print(share_list)
         # print(name_list)
 
-        df_list = [
-            stock_zh_a_hist(symbol=str(i), start_date='2023-01-01', period='daily', adjust='').iloc[-previous:, :6] for
-            i in share_list]
+        # df_list = [
+        #     stock_zh_a_hist(symbol=str(i), start_date='2023-01-01', period='daily', adjust='').iloc[-previous:, :6] for
+        #     i in share_list]
+        df_list = []
+        for i in share_list:
+            try:
+                df_list.append(
+                    stock_zh_a_hist(symbol=str(i), start_date='2022-01-01', period='daily', adjust='').iloc[-previous:,
+                    :6])
+            except Exception:
+                pass
+
         # print(type(df_list[0]))
         # quit()
         rise_list = []
@@ -355,7 +375,7 @@ class StockInfo:
     def draw_industry(self, industry='A01', previous=7, render=True):
         fine_df = self.fine_industry_df
 
-        index = fine_df[fine_df.industry_code==industry].index.tolist()[0]
+        index = fine_df[fine_df.industry_code == industry].index.tolist()[0]
         industry_cn_name = fine_df.loc[index, 'industry']
         industry_df = pd.read_csv(f'fine_field_csv_folder/{industry}.csv', index_col=0)
         share_list = industry_df.loc[:, 'share_code'].tolist()
@@ -363,14 +383,25 @@ class StockInfo:
         df_list, index_list = self.industry_df_list(industry, previous=previous)
 
         c = (
-            Line()
+            Line(init_opts=opts.InitOpts(width='1000px', height='1500px'))
                 .add_xaxis(list(df_list[0]['date']))
         )
-        for idx in index_list:
-            c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist())
+        # for idx in index_list:
+        #     c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist())
+        for i in range(len(df_list)):
+            if i in index_list:
+                c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist())
+            else:
+                c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist(),
+                            is_selected=False)
+
         c.set_global_opts(title_opts=opts.TitleOpts(title=industry_cn_name, subtitle=industry),
                           xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-60)),
                           yaxis_opts=opts.AxisOpts(is_scale=True),
+                          legend_opts=opts.LegendOpts(type_='scroll', orient='horizontal', pos_top='5%'),
+                          datazoom_opts=[opts.DataZoomOpts(range_start=0),
+                                         opts.DataZoomOpts(type_="inside", range_start=0)],
+                          tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
 
                           )
         c.set_series_opts(label_opts=opts.LabelOpts(is_show=False))
@@ -379,17 +410,128 @@ class StockInfo:
             os.makedirs('industry_draw')
         if render:
             c.render(f'./industry_draw/{industry}.html')
+        else:
+            return c
+
+    def single_query(self, code='600017', previous=7):
+        df = stock_zh_a_hist(symbol=str(code), start_date='2022-01-01', period='daily', adjust='').iloc[-previous:, :6]
+        df.columns = ['date', 'open', 'close', 'high', 'low', 'volume', ]
+        ohlc = df[['open', 'close', 'low', 'high']]  # oclh结构
+        v = df['volume']
+        date = df['date'].tolist()
+        data = np.array(ohlc).tolist()  # 通过np转为list
+        volumn = np.array(v).tolist()
+
+        return date, data, volumn
+
+    def draw_single(self, code='600013', previous=7, render=True):
+        date, data, volumn = self.single_query(code, previous=previous)
+        kline = (
+            Kline()
+                .add_xaxis(date)
+                .add_yaxis(
+                series_name="",
+                y_axis=data,
+                itemstyle_opts=opts.ItemStyleOpts(
+                    color0="#ef232a",
+                    color="#14b143",
+                    border_color0="#ef232a",
+                    border_color="#14b143",
+                ),
+                markpoint_opts=opts.MarkPointOpts(
+                    data=[
+                        opts.MarkPointItem(type_="max", name="最大值"),
+                        opts.MarkPointItem(type_="min", name="最小值"),
+                    ]
+                ),
+            )
+                .set_global_opts(
+                xaxis_opts=opts.AxisOpts(
+                    type_="category",
+                    is_scale=True,
+                    boundary_gap=False,
+                    axisline_opts=opts.AxisLineOpts(is_on_zero=False),
+                    splitline_opts=opts.SplitLineOpts(is_show=False),
+                    split_number=20,
+                    min_="dataMin",
+                    max_="dataMax",
+                ),
+                yaxis_opts=opts.AxisOpts(
+                    is_scale=True,
+                    splitarea_opts=opts.SplitAreaOpts(
+                        is_show=True, areastyle_opts=opts.AreaStyleOpts(opacity=1)
+                    ),
+                ),
+                tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
+                datazoom_opts=[opts.DataZoomOpts(
+                    is_show=False, type_="inside", xaxis_index=[0, 0], range_end=100
+                ),
+                    opts.DataZoomOpts(is_show=True, xaxis_index=[0, 1], range_end=100)
+                ],
+                title_opts=opts.TitleOpts(title=self.code2cn_name(code), subtitle=code, ),
+            )
+        )
+
+        bar_vol = (
+            Bar()
+                .add_xaxis(xaxis_data=date)
+                .add_yaxis(
+                series_name="",
+                y_axis=volumn,
+                xaxis_index=1,
+                yaxis_index=1,
+                label_opts=opts.LabelOpts(is_show=False),
+                itemstyle_opts=opts.ItemStyleOpts(
+                    color=JsCode(
+                        """
+                    function(params) {
+                        var colorList;
+                        if (barData[params.dataIndex][1] > barData[params.dataIndex][0]) {
+                            colorList = '#14b143';
+                        } else {
+                            colorList = '#ef232a';
+                        }
+                        return colorList;
+                    }
+                    """
+                    )
+                )
+            )
+        )
+        grid_chart = Grid(init_opts=opts.InitOpts(width="1000px", height="600px"))
+        grid_chart.add_js_funcs("var barData = {}".format(data))
+        grid_chart.add(
+            kline,
+            grid_opts=opts.GridOpts(
+                pos_left="5%", pos_right="1%", pos_top="5%", height="60%"
+            )
+        )
+        grid_chart.add(
+            bar_vol,
+            grid_opts=opts.GridOpts(
+                pos_left="5%", pos_right="1%", pos_top="70%", height="20%"
+            )
+        )
+        if render:
+            grid_chart.render("sss.html")
+
+        return grid_chart
 
 
-s = StockInfo(headless=True)
-# print(s.historical_macro_df)
-# s.draw_macro()
-# s.draw_area_chart(render=True)
-# s.industry_df_list('A01')
-print(s.fine_industry_df.iloc[:, 1:])
-s.draw_industry('A01', render=True, previous=10)
-# s.draw_classify_chart(s.fine_industry_df, render=True)
-# s.code_select()
-# page = Page(layout=Page.DraggablePageLayout)
-# page.add(s.area_chart)
-# page.render('temp.html')
+if __name__ == '__main__':
+    s = StockInfo(headless=True)
+    # print(s.historical_macro_df)
+    # s.draw_macro(render=True, previous=15)
+    # s.draw_area_chart(render=True)
+    # print(s.fine_industry_df)
+    # s.industry_df_list('A01')
+    # s.draw_industry('A01', render=True, previous=10)
+    # s.draw_classify_chart(s.fine_industry_df, render=True)
+    # s.code_select()
+    # page = Page(layout=Page.DraggablePageLayout)
+    # page.add(s.area_chart)
+    # page.render('temp.html')
+    # print(s.single_query())
+    s.draw_single(code='601318', previous=50)
+    # r = s.draw_classify_chart(s.rough_industry_df, render=False)
+    # put_html(r.render_notebook())
