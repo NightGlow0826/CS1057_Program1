@@ -4,5 +4,5 @@
 *.html linguist-language=Python
 *.js linguist-language=Python
 *.xml linguist-language=Python
-*.css linguist-language=Python
+*.csv linguist-language=Python
 *.sql linguist-language=Python
