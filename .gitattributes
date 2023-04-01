@@ -1,0 +1,8 @@
+*.java linguist-language=Python
+*.md linguist-language=Python
+*.yml linguist-language=Python
+*.html linguist-language=Python
+*.js linguist-language=Python
+*.xml linguist-language=Python
+*.css linguist-language=Python
+*.sql linguist-language=Python
