@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/CS1057_Program1.iml" filepath="$PROJECT_DIR$/.idea/CS1057_Program1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Quantified Fianance/.idea/Quantified Fianance.iml" filepath="$PROJECT_DIR$/../Quantified Fianance/.idea/Quantified Fianance.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../NLP_FINANCE/wsj_selenium_crawler/.idea/wsj_selenium_crawler.iml" filepath="$PROJECT_DIR$/../NLP_FINANCE/wsj_selenium_crawler/.idea/wsj_selenium_crawler.iml" />
+    </modules>
+  </component>
+</project>

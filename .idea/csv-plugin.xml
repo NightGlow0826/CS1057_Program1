@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CsvFileAttributes">
+    <option name="attributeMap">
+      <map>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_11_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_14_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_15_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_17_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_20_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_21_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_23_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_25_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="D:\Python Projects\NLP_FINANCE\wsj_selenium_crawler\source\cover\csv\2023_1_26_cover.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\favorite.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\fine_field_csv_folder\A01.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\fine_field_csv_folder\C20.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\fine_field_csv_folder\C29.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\fine_field_csv_folder\C39.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\fine_field_csv_folder\S90.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\macro_hist.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

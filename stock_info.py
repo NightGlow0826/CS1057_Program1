@@ -7,12 +7,15 @@
 @Time    : 2023/3/27 18:09
 """
 import os.path
+import random
 import re
 import time
 
 import bs4
 import numpy as np
 import pandas as pd
+from akshare.stock.cons import hk_js_decode
+from py_mini_racer import py_mini_racer
 from tqdm.contrib import tzip
 import heapq
 
@@ -41,7 +44,7 @@ class StockInfo:
         self.specified_industry_base = r'http://www.sse.com.cn/assortment/stock/areatrade/trade/detail.shtml?csrcCode='
         self.prefix = r'http://www.sse.com.cn'
         self.historical_link_base = r'http://www.sse.com.cn/market/stockdata/overview/'
-        # self.driver = args.Driver(headless=headless).blank_driver
+        self.driver = args.Driver(headless=headless).blank_driver
         self.fine_update = fine_update
         if not os.path.exists('basic_html'):
             os.makedirs('basic_html')
@@ -52,12 +55,11 @@ class StockInfo:
         return list(hist_data)
 
     def code2cn_name(self, code: str):
-        rep = requests.get(f'http://quote.eastmoney.com/sh{code}.html')
+        rep = requests.get(f'https://finance.sina.com.cn/realstock/company/sh{code}/nc.shtml')
         rep.encoding = 'utf-8'
-        bs = bs4.BeautifulSoup(rep.text, 'lxml')
-
-        a = bs.find_all('div', {"class": 'quote_title_l'})[0]
-        name = a.find_all_next('span')[0].text
+        bs = bs4.BeautifulSoup(rep.content, 'lxml')
+        body = bs.find('h1', {"id": 'stockName'})
+        name = body.find_next('i').text
         return name
 
     @property
@@ -74,12 +76,14 @@ class StockInfo:
         text = rep.text
         text = repr(text).replace(r'\n', '').replace(r'\t', '').replace(' ', '').replace(r'\r', '').replace(r'\\', '')
 
-        with open('dust/1.txt', 'w+', encoding='utf-8') as f:
-            f.write(text)
+        # with open('dust/1.txt', 'w+', encoding='utf-8') as f:
+        #     f.write(text)
+        #
+        # with open('dust/1.txt', 'r', encoding='utf-8') as f:
+        #     rep = f.read()
+        #     t = re.findall(r"\[\\'<atarget.*?]", rep)
 
-        with open('dust/1.txt', 'r', encoding='utf-8') as f:
-            rep = f.read()
-            t = re.findall(r"\[\\'<atarget.*?]", rep)
+        t = re.findall(r"\[\\'<atarget.*?]", text)
         for item in t:
             # print(item)
             area = re.findall('>(.*?)<', item)[0]
@@ -92,9 +96,11 @@ class StockInfo:
             area_df.loc[t.index(item)] = area, a, ab, b
         return area_df
 
-    def draw_area_chart(self, render=True):
-        province = list(self.area_df['area'])
-        A_shares = list(self.area_df['A'])
+    def draw_area_chart(self, render=True, df=pd.DataFrame()):
+        df = df if not df.empty else self.area_df
+        # print(df)
+        province = list(df['area'])
+        A_shares = list(df['A'])
         for i in range(len(province)):
             if province[i] in ['北京', '重庆', '天津', '上海']:
                 province[i] = province[i] + '市'
@@ -126,7 +132,6 @@ class StockInfo:
             c.render("./basic_html/area_distribution.html")
 
         return c
-
 
     @property
     def rough_industry_df(self):
@@ -199,13 +204,16 @@ class StockInfo:
         c = (
             Bar()
                 .add_xaxis(list(rough_df['industry']))
-                .add_yaxis("总股数", list(rough_df['share_num']))
+                .add_yaxis("总股数", list(rough_df['share_num']), is_selected=False)
                 .add_yaxis("市盈率", list(rough_df['ave_pe']))
                 .add_yaxis("平均股价", list(rough_df['ave_price']))
                 .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
                 .set_global_opts(title_opts=opts.TitleOpts(title="分类"),
                                  xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-60)),
-                                 datazoom_opts=[opts.DataZoomOpts(), opts.DataZoomOpts(type_="inside")],
+                                 datazoom_opts=[opts.DataZoomOpts(range_start=0, range_end=30),
+                                                opts.DataZoomOpts(type_="inside")],
+                                 tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
+
                                  )
 
         )
@@ -304,8 +312,11 @@ class StockInfo:
 
         return a_macro_df
 
-    def draw_macro(self, render=True, previous=7):
-        df = pd.read_csv('macro_hist.csv', index_col=0)[-previous:]
+    def draw_macro(self, render=True, previous=7, update=False):
+        if not update:
+            df = pd.read_csv('macro_hist.csv', index_col=0)[-previous:]
+        else:
+            df = self.historical_macro_df
         # print(df)
         c = (
             Line()
@@ -323,13 +334,15 @@ class StockInfo:
             )
                 .add_yaxis(
                 "流通换手率",
-                df['turnover_l'],
+                df['turnover_l'], is_selected=False
             )
                 .set_global_opts(title_opts=opts.TitleOpts(title="Overview"),
                                  datazoom_opts=[opts.DataZoomOpts(range_start=0, range_end=100),
                                                 opts.DataZoomOpts(type_="inside")],
                                  xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-60)),
-                                 yaxis_opts=opts.AxisOpts(is_scale=True)
+                                 yaxis_opts=opts.AxisOpts(is_scale=True),
+                                 tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
+
                                  )
         )
         if render:
@@ -386,14 +399,22 @@ class StockInfo:
             Line(init_opts=opts.InitOpts(width='1000px', height='1500px'))
                 .add_xaxis(list(df_list[0]['date']))
         )
-        # for idx in index_list:
-        #     c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist())
-        for i in range(len(df_list)):
-            if i in index_list:
-                c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist())
-            else:
-                c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist(),
-                            is_selected=False)
+        total_list = [i for i in range(len(df_list))]
+        uns = list(set(total_list) - set(index_list))
+        for idx in index_list:
+            c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist())
+        if len(uns) >= 15:
+            uns = random.sample(uns, 10)
+
+        for idx in uns:
+            c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist())
+
+        # for i in range(len(df_list)):
+        #     if i in index_list:
+        #         c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist())
+        #     else:
+        #         c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist(),
+        #                     is_selected=False)
 
         c.set_global_opts(title_opts=opts.TitleOpts(title=industry_cn_name, subtitle=industry),
                           xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-60)),
@@ -517,12 +538,58 @@ class StockInfo:
 
         return grid_chart
 
+    def index_query(self, code):
+        url = r'https://finance.sina.com.cn/realstock/company/{}/hisdata/klc_kl.js'
+        params = {"d": "2020_2_4"}
+        res = requests.get(url.format(code), params=params)
+        js_code = py_mini_racer.MiniRacer()
+        js_code.eval(hk_js_decode)
+        dict_list = js_code.call(
+            "d", res.text.split("=")[1].split(";")[0].replace('"', "")
+        )  # 执行js解密代码
+        temp_df = pd.DataFrame(dict_list)
+        temp_df["date"] = pd.to_datetime(temp_df["date"]).dt.date
+        temp_df["close"] = pd.to_numeric(temp_df["close"])
+        return temp_df
+
+    def draw_index(self, code='sh000001', previous=800, render=True):
+
+        df = self.index_query(code, ).iloc[-previous:]
+
+        date_list = df['date'].tolist()
+        index_list = df['close'].tolist()
+        name_dict = {'sh000001': '上证指数', 'sh000016': '上证50', 'sh000017': '新综指'}
+        c = (
+            Line()
+                .add_xaxis(date_list)
+                .add_yaxis(name_dict.get(code, 'Unknown Index'), index_list, is_smooth=True)
+                .set_series_opts(
+                areastyle_opts=opts.AreaStyleOpts(opacity=0.5),
+                label_opts=opts.LabelOpts(is_show=False),
+            )
+                .set_global_opts(
+                title_opts=opts.TitleOpts(title=name_dict.get(code, 'Unknown Index')),
+                xaxis_opts=opts.AxisOpts(
+                    axistick_opts=opts.AxisTickOpts(is_align_with_label=True),
+                    is_scale=True,
+                    boundary_gap=True,
+                ),
+                yaxis_opts=opts.AxisOpts(is_scale=True),
+                datazoom_opts=[opts.DataZoomOpts(range_start=60, range_end=100),
+                               opts.DataZoomOpts(type_="inside", range_start=0)],
+                tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
+
+            )
+        )
+        if render:
+            c.render('index')
+        return c
 
 if __name__ == '__main__':
     s = StockInfo(headless=True)
     # print(s.historical_macro_df)
     # s.draw_macro(render=True, previous=15)
-    # s.draw_area_chart(render=True)
+    s.draw_area_chart(render=False)
     # print(s.fine_industry_df)
     # s.industry_df_list('A01')
     # s.draw_industry('A01', render=True, previous=10)
@@ -532,6 +599,7 @@ if __name__ == '__main__':
     # page.add(s.area_chart)
     # page.render('temp.html')
     # print(s.single_query())
-    s.draw_single(code='601318', previous=50)
+    # s.draw_single(code='601318', previous=50)
     # r = s.draw_classify_chart(s.rough_industry_df, render=False)
+    # s.draw_index()
     # put_html(r.render_notebook())
