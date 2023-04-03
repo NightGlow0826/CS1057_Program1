@@ -29,14 +29,14 @@ def single_query():
             value='601318',
             key='placeholder'
         )
-        option = c2.selectbox('Previous Length', (120, 15, 30, 60))
+        option = c2.selectbox('Previous Length', (120, 15, 30, 60, 240, 360, 720))
         col1, col2 = st.columns(2)
         submission_button = col1.form_submit_button(label='Start')
         luck_button = col2.form_submit_button(label='Luck')
 
         if submission_button:
             try:
-                st.info(f'Drawing {sto.code2cn_name(code)}:{code} ...')
+                st.info(f'Drawing {code2cn_name(code)}:{code} ...')
             except IndexError:
                 st.error(f'Your code is not valid')
             # st_pyecharts(sto.draw_single(code, previous=50, render=False))
