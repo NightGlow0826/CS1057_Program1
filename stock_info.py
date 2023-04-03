@@ -10,7 +10,7 @@ import os.path
 import random
 import re
 import time
-
+from functools import lru_cache
 import bs4
 import numpy as np
 import pandas as pd
@@ -37,14 +37,24 @@ from pyecharts.charts import Map, Page, Bar, Line, Kline, Grid
 from pyecharts.commons.utils import JsCode
 
 
+def code2cn_name(code: str):
+    rep = requests.get(f'https://finance.sina.com.cn/realstock/company/sh{code}/nc.shtml')
+    rep.encoding = 'utf-8'
+    bs = bs4.BeautifulSoup(rep.content, 'lxml')
+    body = bs.find('h1', {"id": 'stockName'})
+    name = body.find_next('i').text
+    return name
+
 class StockInfo:
-    def __init__(self, headless=False, fine_update=False):
+    @lru_cache
+    def __init__(self, headless=False, fine_update=False, simulate=True):
         self.area_classify_link = r'http://www.sse.com.cn/assortment/stock/areatrade/area/'
         self.industry_classify_link = r'http://www.sse.com.cn/assortment/stock/areatrade/trade/'
         self.specified_industry_base = r'http://www.sse.com.cn/assortment/stock/areatrade/trade/detail.shtml?csrcCode='
         self.prefix = r'http://www.sse.com.cn'
         self.historical_link_base = r'http://www.sse.com.cn/market/stockdata/overview/'
-        self.driver = args.Driver(headless=headless).blank_driver
+        if simulate:
+            self.driver = args.Driver(headless=headless).blank_driver
         self.fine_update = fine_update
         if not os.path.exists('basic_html'):
             os.makedirs('basic_html')
@@ -54,13 +64,7 @@ class StockInfo:
                     -previous:, 0]
         return list(hist_data)
 
-    def code2cn_name(self, code: str):
-        rep = requests.get(f'https://finance.sina.com.cn/realstock/company/sh{code}/nc.shtml')
-        rep.encoding = 'utf-8'
-        bs = bs4.BeautifulSoup(rep.content, 'lxml')
-        body = bs.find('h1', {"id": 'stockName'})
-        name = body.find_next('i').text
-        return name
+
 
     @property
     def area_df(self):
@@ -489,7 +493,7 @@ class StockInfo:
                 ),
                     opts.DataZoomOpts(is_show=True, xaxis_index=[0, 1], range_end=100)
                 ],
-                title_opts=opts.TitleOpts(title=self.code2cn_name(code), subtitle=code, ),
+                title_opts=opts.TitleOpts(title=code2cn_name(code), subtitle=code, ),
             )
         )
 

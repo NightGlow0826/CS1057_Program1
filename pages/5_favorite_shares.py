@@ -15,14 +15,14 @@ import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from streamlit_echarts import st_pyecharts
 from streamlit_echarts import Map as st_Map
-from stock_info import StockInfo
+from stock_info import StockInfo, code2cn_name
 import json
 import streamlit.components.v1 as components
 import numpy as np
 import akshare as ak
 
 st.set_page_config(layout="wide")
-sto = StockInfo(headless=True, fine_update=False)
+sto = StockInfo(headless=True, fine_update=False, simulate=False)
 
 
 def favorit():
@@ -50,7 +50,7 @@ def favorite_query():
         submission_button = st.form_submit_button(label='Start')
         if submission_button:
             try:
-                st.info(f'Drawing {sto.code2cn_name(code)}:{code} ...')
+                st.info(f'Drawing {code2cn_name(code)}:{code} ...')
             except IndexError:
                 st.info(f'Your code is not valid')
             # st_pyecharts(sto.draw_single(code, previous=50, render=False))
@@ -88,7 +88,7 @@ def select():
 
         elif add_button:
             try:
-                cn_name = sto.code2cn_name(str(code))
+                cn_name = code2cn_name(str(code))
             except Exception:
                 st.error('Invalid Code')
                 return None
@@ -104,7 +104,7 @@ def select():
             if int(code) not in data['code'].tolist():
                 st.error('Not in favorite list')
             else:
-                st.warning(f'{sto.code2cn_name(code)}: {code} Delete Successfully, Please Update')
+                st.warning(f'{code2cn_name(code)}: {code} Delete Successfully, Please Update')
 
                 data = data.drop(index=data[data['code'] == int(code)].index)
         data.to_csv(r'./favorite.csv')

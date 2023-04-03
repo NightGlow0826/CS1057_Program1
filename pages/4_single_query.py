@@ -11,12 +11,12 @@ import akshare as ak
 import pandas as pd
 import streamlit as st
 from streamlit_echarts import st_pyecharts
-from stock_info import StockInfo
+from stock_info import StockInfo, code2cn_name
 import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
 
-sto = StockInfo(headless=True)
+sto = StockInfo(headless=True, simulate=False)
 
 
 def single_query():
@@ -49,18 +49,18 @@ def single_query():
             for i in range(42):
                 luck = random.sample(a, 1)[0]
                 try:
-                    sto.code2cn_name(luck)
+                    code2cn_name(luck)
                 except Exception:
                     if i % 6 == 0:
                         st.error("luck dosen't work this time")
                     continue
 
                 try:
-                    st.info(f'Drawing {sto.code2cn_name(luck)}:{luck} ...')
+                    st.info(f'Drawing {code2cn_name(luck)}:{luck} ...')
                     break
                 except Exception:
                     # st.write(f'Your code is not valid')
-                    st.warning(f'This stock {sto.code2cn_name(luck)}: {luck} stopped selling/Trading')
+                    st.warning(f'This stock {code2cn_name(luck)}: {luck} stopped selling/Trading')
 
             # st_pyecharts(sto.draw_single(code, previous=50, render=False))
             components.html(sto.draw_single(luck, previous=120, render=False).render_embed(), height=600, width=1200)

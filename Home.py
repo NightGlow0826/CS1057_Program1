@@ -8,18 +8,10 @@ import streamlit.components.v1 as components
 from st_aggrid import AgGrid
 from streamlit_echarts import st_pyecharts
 
-from stock_info import StockInfo
+from stock_info import StockInfo, code2cn_name
 
 st.set_page_config(layout="wide")
-sto = StockInfo(headless=True, fine_update=False)
-
-
-
-
-
-
-
-
+sto = StockInfo(headless=True, fine_update=False, simulate=False)
 
 
 def industry():
@@ -63,7 +55,7 @@ def single_query():
 
         if submission_button:
             try:
-                st.info(f'Drawing {sto.code2cn_name(code)}:{code} ...')
+                st.info(f'Drawing {code2cn_name(code)}:{code} ...')
             except IndexError:
                 st.error(f'Your code is not valid')
             # st_pyecharts(sto.draw_single(code, previous=50, render=False))

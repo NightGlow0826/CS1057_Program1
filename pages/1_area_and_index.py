@@ -18,7 +18,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
 
-sto = StockInfo(headless=True)
+sto = StockInfo(headless=True, simulate=False)
 
 
 @st.cache_data
