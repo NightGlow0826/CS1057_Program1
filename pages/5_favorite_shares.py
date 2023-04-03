@@ -46,7 +46,7 @@ def favorite_query():
         c1, c2 = st.columns(2)
 
         code = c1.selectbox('Find One', zip(data['code'].tolist(), data['name'].tolist()))[0]
-        p = c2.selectbox('Previous Length', (15, 30, 60, 120))
+        p = c2.selectbox('Previous Length', (120, 15, 30, 60, 180, 240, 360, 720))
         submission_button = st.form_submit_button(label='Start')
         if submission_button:
             try:
