@@ -1,3 +1,8 @@
+#!/usr/local/bin/python3
+# -*- coding: utf-8 -*-
+
+
+
 import os.path
 import random
 
@@ -150,7 +155,7 @@ def select():
 
         elif add_button:
             try:
-                cn_name = sto.code2cn_name(str(code))
+                cn_name = code2cn_name(str(code))
             except Exception:
                 st.error('Invalid Code')
                 return None
@@ -175,3 +180,10 @@ def select():
 if __name__ == '__main__':
     st.title('CS1507 Program 1')
     st.header('干雨杨 PB21050969')
+    st.success('Welcome')
+    c1, c2 = st.columns(2)
+    c1.info('The Github repo url is')
+    c2.code(r'https://github.com/YoimiyaInUSTC/CS1057_Program1')
+    c1, c2 = st.columns(2)
+    c1.info("The Author's QQ is")
+    c2.code(r'3218275879')
