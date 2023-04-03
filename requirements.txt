@@ -1,0 +1,13 @@
+akshare==1.9.13
+beautifulsoup4==4.11.1
+fake_useragent==1.1.1
+numpy==1.23.1
+pandas==1.4.3
+py_mini_racer==0.6.0
+pyecharts==2.0.2
+requests==2.28.1
+selenium==4.7.2
+streamlit==1.20.0
+streamlit_echarts==0.4.0
+tqdm==4.64.0
+streamlit-aggrid==0.3.4.post3
