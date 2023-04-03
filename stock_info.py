@@ -30,7 +30,6 @@ from akshare import stock_zh_a_hist
 # import akshare as ak
 from tqdm import *
 import args
-from pywebio.output import put_html
 
 from pyecharts import options as opts
 from pyecharts.charts import Map, Page, Bar, Line, Kline, Grid
@@ -411,7 +410,8 @@ class StockInfo:
             uns = random.sample(uns, 10)
 
         for idx in uns:
-            c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist())
+            c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist(),
+                        is_selected=False)
 
         # for i in range(len(df_list)):
         #     if i in index_list:
@@ -425,7 +425,7 @@ class StockInfo:
                           yaxis_opts=opts.AxisOpts(is_scale=True),
                           legend_opts=opts.LegendOpts(type_='scroll', orient='horizontal', pos_top='5%'),
                           datazoom_opts=[opts.DataZoomOpts(range_start=0),
-                                         opts.DataZoomOpts(type_="inside", range_start=0)],
+                                         opts.DataZoomOpts(type_="inside", range_start=0, range_end=100)],
                           tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
 
                           )
@@ -439,7 +439,7 @@ class StockInfo:
             return c
 
     def single_query(self, code='600017', previous=7):
-        df = stock_zh_a_hist(symbol=str(code), start_date='2022-01-01', period='daily', adjust='').iloc[-previous:, :6]
+        df = stock_zh_a_hist(symbol=str(code), start_date='2020-01-01', period='daily', adjust='').iloc[-previous:, :6]
         df.columns = ['date', 'open', 'close', 'high', 'low', 'volume', ]
         ohlc = df[['open', 'close', 'low', 'high']]  # oclh结构
         v = df['volume']
