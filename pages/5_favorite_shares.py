@@ -72,6 +72,7 @@ def select():
         n = responce['data']
         st.write(n)
         code = st.text_input(label='Input a code', )
+        code = code.strip().replace(',', '')
         if not code:
             code = '1'
         col1, col2 = st.columns(2)
