@@ -10,6 +10,7 @@ import os.path
 import random
 import re
 import time
+from datetime import datetime
 from functools import lru_cache
 import bs4
 import numpy as np
@@ -18,10 +19,12 @@ from akshare.stock.cons import hk_js_decode
 from py_mini_racer import py_mini_racer
 from tqdm.contrib import tzip
 import heapq
+from fake_useragent import UserAgent
 
 pd.set_option('display.max_rows', 1000)
 pd.set_option('display.max_columns', 1000)
 import requests
+import json
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -37,16 +40,28 @@ from pyecharts.commons.utils import JsCode
 
 
 def code2cn_name(code: str):
-    rep = requests.get(f'https://finance.sina.com.cn/realstock/company/sh{code}/nc.shtml')
+    if str(code)[0] == '6':
+        rep = requests.get(f'https://finance.sina.com.cn/realstock/company/sh{code}/nc.shtml')
+    else:
+        rep = requests.get(f'https://finance.sina.com.cn/realstock/company/sz{code}/nc.shtml')
     rep.encoding = 'utf-8'
     bs = bs4.BeautifulSoup(rep.content, 'lxml')
     body = bs.find('h1', {"id": 'stockName'})
     name = body.find_next('i').text
     return name
 
+
 class StockInfo:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     @lru_cache
     def __init__(self, headless=False, fine_update=False, simulate=True):
+
         self.area_classify_link = r'http://www.sse.com.cn/assortment/stock/areatrade/area/'
         self.industry_classify_link = r'http://www.sse.com.cn/assortment/stock/areatrade/trade/'
         self.specified_industry_base = r'http://www.sse.com.cn/assortment/stock/areatrade/trade/detail.shtml?csrcCode='
@@ -54,6 +69,9 @@ class StockInfo:
         self.historical_link_base = r'http://www.sse.com.cn/market/stockdata/overview/'
         if simulate:
             self.driver = args.Driver(headless=headless).blank_driver
+            print('simulate mode')
+        else:
+            print('none mode')
         self.fine_update = fine_update
         if not os.path.exists('basic_html'):
             os.makedirs('basic_html')
@@ -62,8 +80,6 @@ class StockInfo:
         hist_data = stock_zh_a_hist(symbol='601318', start_date='2023-01-01', period='daily', adjust='').iloc[
                     -previous:, 0]
         return list(hist_data)
-
-
 
     @property
     def area_df(self):
@@ -121,7 +137,8 @@ class StockInfo:
             # Map(init_opts=opts.InitOpts(width='1500px', height='900px'))
             Map()
                 .add("A股发行数量", [list(z) for z in zip(province, A_shares)], "china",
-                     is_map_symbol_show=False)
+                     is_map_symbol_show=False,
+                     layout_center=['100%', '5%'])
                 .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
                 .set_global_opts(
                 title_opts=opts.TitleOpts(title="A SHARE DISTRIBUTION", is_show=True),
@@ -272,72 +289,102 @@ class StockInfo:
             df.to_csv(os.path.join(industry_csv_folder_path, f'{industry_code}.csv'))
             # quit()
 
-    @property
-    def historical_macro_df(self):
-        # 应该多返回一些
-        a_macro_df = pd.DataFrame(columns=['date', 'total', 'total_l', 'vol', 'amount', 'pe', 'turnover', 'turnover_l'])
-        date_list = self.hist_date_list(previous=50)
-        # date_list = ['2023-03-30']
-        self.driver.get(self.historical_link_base + r'day/')
-        js = r'document.getElementsByClassName("form-control sse_input")[0].removeAttribute("readonly");'
-        # 注入js, 去除只读属性
+    # @property
+    # def historical_macro_df(self):
+    #     # 应该多返回一些
+    #     a_macro_df = pd.DataFrame(columns=['date', 'total', 'total_l', 'vol', 'amount', 'pe', 'turnover', 'turnover_l'])
+    #     date_list = self.hist_date_list(previous=15)
+    #     # date_list = ['2023-03-30']
+    #     self.driver.get(self.historical_link_base + r'day/')
+    #     js = r'document.getElementsByClassName("form-control sse_input")[0].removeAttribute("readonly");'
+    #     # 注入js, 去除只读属性
+    #
+    #     WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, r"form-control.sse_input")))
+    #     time.sleep(2)
+    #     # 等待页面全部加载完成
+    #     self.driver.execute_script(js)
+    #     for date in tqdm(date_list):
+    #         date_input_frame = self.driver.find_element(By.CLASS_NAME, r"form-control.sse_input")
+    #         date_input_frame.clear()
+    #         date_input_frame.send_keys(date)
+    #
+    #         date_input_frame.click()
+    #
+    #         WebDriverWait(self.driver, 10).until(
+    #             EC.presence_of_element_located((By.CLASS_NAME, r"laydate-btns-confirm")))
+    #         confirm_button = self.driver.find_element(By.CLASS_NAME, r'laydate-btns-confirm')
+    #         confirm_button.click()
+    #         time.sleep(1)
+    #         page_source = self.driver.page_source
+    #         bs = bs4.BeautifulSoup(page_source, "lxml")
+    #         tbody = bs.find('tbody')
+    #         rows = tbody.find_all_next('tr')[1:]
+    #         # 第一行是挂牌数, 意义不大
+    #         try:
+    #             total, total_l, vol, amount, pe, turnover, turnover_l = [
+    #                 i.find_all_next('td', {'class': "text-right text-nowrap"})[1].text for i in rows]
+    #         except Exception:
+    #             break
+    #         a_macro_df.loc[date_list.index(date)] = date, total, total_l, vol, amount, pe, turnover, turnover_l
+    #         # print(a_macro_df)
+    #         # quit()
+    #         a_macro_df.to_csv(r'./macro_hist.csv')
+    #
+    #     return a_macro_df
 
-        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, r"form-control.sse_input")))
-        time.sleep(2)
-        # 等待页面全部加载完成
-        self.driver.execute_script(js)
-        for date in tqdm(date_list):
-            date_input_frame = self.driver.find_element(By.CLASS_NAME, r"form-control.sse_input")
-            date_input_frame.clear()
-            date_input_frame.send_keys(date)
+    def macro_by_requests(self, previous=60):
+        ua = UserAgent()
+        headers = {
+            'Referer': 'http://www.sse.com.cn/',
 
-            date_input_frame.click()
+            'User-Agent': ua.random
+        }
+        session = requests.Session()
+        session.get('http://www.sse.com.cn/', headers=headers)
+        print(self.hist_date_list(previous=2)[:-1])
 
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, r"laydate-btns-confirm")))
-            confirm_button = self.driver.find_element(By.CLASS_NAME, r'laydate-btns-confirm')
-            confirm_button.click()
-            time.sleep(1)
-            page_source = self.driver.page_source
-            bs = bs4.BeautifulSoup(page_source, "lxml")
-            tbody = bs.find('tbody')
-            rows = tbody.find_all_next('tr')[1:]
-            # 第一行是挂牌数, 意义不大
+        h_data_dict_list = []
+        dl = self.hist_date_list(previous=previous)
+        for date in tqdm(dl):
+            a = int(time.time() - 30) * 1000 - 100
+            url = f'http://query.sse.com.cn/commonQuery.do?jsonCallBack=jsonpCallback32438768&sqlId=COMMON_SSE_SJ_GPSJ_CJGK_MRGK_C&PRODUCT_CODE=01%2C02%2C03%2C11%2C17&type=inParams&SEARCH_DATE={date}&_={a}'
+            resp2 = session.get(url, headers=headers)
+            resp2.encoding = args.encoding
+            content = resp2.text
+            content = re.findall(pattern=f'.*?\((.*?)\)', string=content)[0]
             try:
-                total, total_l, vol, amount, pe, turnover, turnover_l = [
-                    i.find_all_next('td', {'class': "text-right text-nowrap"})[1].text for i in rows]
+                content = json.loads(content)['result'][0]
+                h_data_dict_list.append(content)
             except Exception:
-                break
-            a_macro_df.loc[date_list.index(date)] = date, total, total_l, vol, amount, pe, turnover, turnover_l
-            # print(a_macro_df)
-            # quit()
-            a_macro_df.to_csv(r'./macro_hist.csv')
+                continue
 
-        return a_macro_df
+        df = pd.DataFrame(data=h_data_dict_list, index=dl)
+        df = df[
+            ['TOTAL_VALUE', 'NEGO_VALUE', 'TRADE_VOL', 'TRADE_AMT', 'AVG_PE_RATE', 'TOTAL_TO_RATE', 'NEGO_TO_RATE', ]]
+        df.to_csv('macro_hist.csv')
 
-    def draw_macro(self, render=True, previous=7, update=False):
-        if not update:
-            df = pd.read_csv('macro_hist.csv', index_col=0)[-previous:]
-        else:
-            df = self.historical_macro_df
+    def draw_macro(self, render=True, previous=7):
+
+        df = pd.read_csv('macro_hist.csv', index_col=0)[-previous:]
+
         # print(df)
         c = (
             Line()
-                .add_xaxis(list(df['date']))
-                .add_yaxis("Vol(千亿)", list(round(df['vol'] / 1e3, 2)),
+                .add_xaxis(list(df.index))
+                .add_yaxis("Vol(百亿)", list(round(df['TRADE_VOL'] / 1e2, 2)),
                            )
-                .add_yaxis("Amount(百亿)", list(round(df['amount'] / 1e2, 2)),
+                .add_yaxis("Amount(千亿)", list(round(df['TRADE_AMT'] / 1e3, 2)),
                            )
-                .add_yaxis("市盈率", df['pe'],
+                .add_yaxis("市盈率", df['AVG_PE_RATE'],
                            is_selected=False
                            )
                 .add_yaxis(
                 "换手率",
-                df['turnover'],
+                df['TOTAL_TO_RATE'],
             )
                 .add_yaxis(
                 "流通换手率",
-                df['turnover_l'], is_selected=False
+                df['NEGO_TO_RATE'], is_selected=False
             )
                 .set_global_opts(title_opts=opts.TitleOpts(title="Overview"),
                                  datazoom_opts=[opts.DataZoomOpts(range_start=0, range_end=100),
@@ -346,6 +393,8 @@ class StockInfo:
                                  yaxis_opts=opts.AxisOpts(is_scale=True),
                                  tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
 
+                                 )
+                .set_series_opts(label_opts=opts.LabelOpts(is_show=False),
                                  )
         )
         if render:
@@ -449,8 +498,41 @@ class StockInfo:
 
         return date, data, volumn
 
-    def draw_single(self, code='600013', previous=7, render=True):
-        date, data, volumn = self.single_query(code, previous=previous)
+    def single_query_2(self, code, seg='day'):
+        code = str(code).strip()
+        if code[:2] == '60' or code[:2] == '68':
+            code = 'SH' + code
+        else:
+            code = 'SZ' + code
+        url = f'https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol={code}&begin={int(time.time()) * 1000}&period={seg}&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance'
+        session = args.snowball_session()
+        rep = session.get(url, headers=args.snowball_index_headers)
+        rep.encoding = 'utf-8'
+        print(rep.url)
+        print(rep.status_code)
+        a = rep.text
+        l_a = json.loads(a)['data']
+
+        df = pd.DataFrame(columns=l_a['column'], data=l_a['item'])
+        df['timestamp'] = df['timestamp'].apply(lambda x: datetime.fromtimestamp(x / 1000).strftime("%Y-%m-%d"))
+        df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'amount']]
+        ohlc = df[['open', 'close', 'low', 'high']]  # oclh结构
+        v = df['volume']
+        date = df['timestamp'].tolist()
+        data = np.array(ohlc).tolist()  # 通过np转为list
+        volumn = np.array(v).tolist()
+
+        return date, data, volumn
+
+    def draw_single(self, code='600013', symbol='SH000001', previous=7, render=True, index=False, seg='day'):
+        if not index:
+            # date, data, volumn = self.single_query(code, previous=previous)
+            date, data, volumn = self.single_query_2(code, seg=seg)
+        else:
+            snowball_index_df = self.index_snowball_query(symbol=symbol, seg=seg)
+            date, data, volumn = snowball_index_df['timestamp'].tolist(), np.array(
+                snowball_index_df[['open', 'close', 'low', 'high']]).tolist(), snowball_index_df['volume'].tolist()
+
         kline = (
             Kline()
                 .add_xaxis(date)
@@ -489,13 +571,16 @@ class StockInfo:
                 ),
                 tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="cross"),
                 datazoom_opts=[opts.DataZoomOpts(
-                    is_show=False, type_="inside", xaxis_index=[0, 0], range_end=100
+                    is_show=False, type_="inside", xaxis_index=[0, 0], range_end=100, range_start=85,
                 ),
                     opts.DataZoomOpts(is_show=True, xaxis_index=[0, 1], range_end=100)
                 ],
-                title_opts=opts.TitleOpts(title=code2cn_name(code), subtitle=code, ),
             )
         )
+        if not index:
+            kline.title_opts = opts.TitleOpts(title=code2cn_name(code), subtitle=code, ),
+        else:
+            kline.title_opts = opts.TitleOpts(title='', subtitle=symbol),
 
         bar_vol = (
             Bar()
@@ -523,7 +608,7 @@ class StockInfo:
                 )
             )
         )
-        grid_chart = Grid(init_opts=opts.InitOpts(width="1000px", height="600px"))
+        grid_chart = Grid(init_opts=opts.InitOpts(width="500px" if index else '1000px', height="600px"))
         grid_chart.add_js_funcs("var barData = {}".format(data))
         grid_chart.add(
             kline,
@@ -542,7 +627,7 @@ class StockInfo:
 
         return grid_chart
 
-    def index_query(self, code):
+    def index_query(self, code='sh000001', ):
         url = r'https://finance.sina.com.cn/realstock/company/{}/hisdata/klc_kl.js'
         params = {"d": "2020_2_4"}
         res = requests.get(url.format(code), params=params)
@@ -555,6 +640,28 @@ class StockInfo:
         temp_df["date"] = pd.to_datetime(temp_df["date"]).dt.date
         temp_df["close"] = pd.to_numeric(temp_df["close"])
         return temp_df
+
+    def index_snowball_query(self, symbol='SH000001', seg='day'):
+        long_period = ['day', 'week', 'month', 'quarter', ]
+        url = f'https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol={symbol}&begin={int(time.time()) * 1000}&period={seg}&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance'
+        session = args.snowball_session()
+
+        rep = session.get(url, headers=args.snowball_index_headers)
+        rep.encoding = 'utf-8'
+        print(rep.url)
+        print(rep.status_code)
+
+        with open('2.txt', 'w+', encoding='utf-8') as f:
+            f.write(rep.text)
+
+        with open('2.txt', 'r', encoding=args.encoding) as f:
+            a = f.read()
+        l_a = json.loads(a)['data']
+
+        df = pd.DataFrame(columns=l_a['column'], data=l_a['item'])
+        df['timestamp'] = df['timestamp'].apply(lambda x: datetime.fromtimestamp(x / 1000).strftime("%Y-%m-%d"))
+        df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'amount']]
+        return df
 
     def draw_index(self, code='sh000001', previous=800, render=True):
 
@@ -589,11 +696,13 @@ class StockInfo:
             c.render('index')
         return c
 
+
 if __name__ == '__main__':
     s = StockInfo(headless=True)
     # print(s.historical_macro_df)
-    # s.draw_macro(render=True, previous=15)
-    s.draw_area_chart(render=False)
+
+    s.draw_macro(render=True, previous=15, update=True)
+    # s.draw_area_chart(render=False)
     # print(s.fine_industry_df)
     # s.industry_df_list('A01')
     # s.draw_industry('A01', render=True, previous=10)
@@ -606,4 +715,6 @@ if __name__ == '__main__':
     # s.draw_single(code='601318', previous=50)
     # r = s.draw_classify_chart(s.rough_industry_df, render=False)
     # s.draw_index()
+    cols = ' date      open      high       low     close       volume'
     # put_html(r.render_notebook())
+    # print(s.index_query())

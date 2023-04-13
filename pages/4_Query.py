@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-@File    : 4_single_query.py
+@File    : 4_Query.py
 @Author  : Gan Yuyang
 @Time    : 2023/4/1 21:08
 """
@@ -14,16 +14,45 @@ import pandas as pd
 import requests
 import streamlit as st
 from fake_useragent import UserAgent
+from st_aggrid import AgGrid
 from streamlit_echarts import st_pyecharts
+
+import args
 from stock_info import StockInfo, code2cn_name
 import streamlit.components.v1 as components
+pd.set_option("display.precision", 4)
+
 
 st.set_page_config(layout="wide")
 
 sto = StockInfo(headless=True, simulate=False)
 
 
-def view(cnname):
+def industry():
+    st.header('Classified Draw')
+    fdf = sto.fine_industry_df
+    cn_name = fdf.loc[:, 'industry'].tolist()
+    ind_code = fdf.loc[:, 'industry_code'].tolist()
+    with st.form(key='industry', ):
+
+        l = [f'{i}: {j}' for i, j in zip(ind_code, cn_name)]
+        c1, c2 = st.columns(2)
+        options = c1.multiselect('Choose Some Industries', l)
+        previous = c2.selectbox('Previous Length', (7, 15, 30, 60))
+        submission_button = st.form_submit_button(label='Start')
+        st.info('This may takes a long time, especially if the computer/internet is not good.')
+
+        # print(l)
+        if submission_button:
+            for ind in options:
+                df = pd.read_csv(f'fine_field_csv_folder/{ind[:3]}.csv')
+                # print(df)
+                if len(df) <= 10:
+                    pass
+                st_pyecharts(sto.draw_industry(ind[:3], previous, render=False))
+
+
+def view(cnname, expand=3):
     ua = UserAgent()
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -43,12 +72,13 @@ def view(cnname):
         "User-Agent": ua.random
     }
     name = cnname
-    rep = requests.get(f'https://xueqiu.com/k?q={name}', headers=headers)
+    session = args.snowball_session()
+    rep = session.get(f'https://xueqiu.com/k?q={name}', headers=args.snowball_simple_headers)
     rep.encoding = 'utf-8'
     # print(rep.url)
     key = re.findall(pattern=r'k?(q=.*)', string=rep.url)[0]
     b = f'https://xueqiu.com/query/v1/search/status.json?sortId=1&{key}&count=20&page=1'
-    info = requests.get(b, headers=headers)
+    info = session.get(b, headers=args.snowball_simple_headers)
     info.encoding = 'utf-8'
     content = info.text
     # with open('1.txt', 'w+', encoding='utf-8') as f:
@@ -64,12 +94,13 @@ def view(cnname):
     content = re.sub(r'网页链接', '<br/>', content)
     text_part = re.findall(r'"text":"(.*?)"', content)
     title_part = re.findall(r'"title":"(.*?)"', content)
-    for text, title in zip(text_part, title_part):
+    time_part = re.findall(r'"timeBefore":"(.*?)"', content)
+    for text, time, title in zip(text_part, time_part, title_part):
         # st.subheader('q')
         pos = text_part.index(text)
         # print(len(text))
-        with st.expander(f'View #{pos + 1},\t Possible len: {len(text)}', expanded=pos < 3):
-            components.html(title, height=30)
+        with st.expander(f'View #{pos + 1},\t Possible len: {len(text)}', expanded=pos < expand):
+            components.html(title + '\t' + time, height=30)
             components.html(text, height=max(min(len(text) / 2, 450), 40), scrolling=True)
 
 
@@ -82,11 +113,14 @@ def single_query():
             label='input a code',
             value='601318',
             key='placeholder'
-        )
-        option = c2.selectbox('Previous Length', (120, 15, 30, 60, 240, 360, 720))
-        col1, col2 = st.columns(2)
+        ).strip().replace(',', '').replace('S', '').replace('H', '').replace('Z', '').replace('s', '').replace('h',
+                                                                                                               '').replace(
+            'z', '')
+        option = c2.selectbox('Segment', ('day', 'week','month', 'quarter'))
+        col1, col2, col3 = st.columns(3)
         submission_button = col1.form_submit_button(label='Start')
         luck_button = col2.form_submit_button(label='Luck')
+        # refb = col3.form_submit_button(label='Luck')
 
         if submission_button:
             try:
@@ -94,9 +128,10 @@ def single_query():
             except IndexError:
                 st.error(f'Your code is not valid')
             # st_pyecharts(sto.draw_single(code, previous=50, render=False))
-            components.html(sto.draw_single(code, previous=option, render=False).render_embed(), height=600, width=1200)
+            components.html(sto.draw_single(code, seg=option, render=False).render_embed(), height=600, width=1200)
             st.success('GOOD LUCK')
             view(code2cn_name(code))
+
         elif luck_button:
             a = ak.stock_info_a_code_name()
             a = a['code'].tolist()
@@ -117,12 +152,39 @@ def single_query():
                     # st.write(f'Your code is not valid')
                     st.warning(f'This stock {code2cn_name(luck)}: {luck} stopped selling/Trading')
 
-            components.html(sto.draw_single(luck, previous=120, render=False).render_embed(), height=600, width=1200)
+            components.html(sto.draw_single(luck, seg=option, render=False).render_embed(), height=600, width=1200)
             view(code2cn_name(luck))
             a1, a2 = st.columns(2)
             a1.success('GOOD LUCK')
             a2.code(luck)
 
 
+def refer():
+    st.header('Reference')
+    # st.info('If you have copie   d a dataframe, submit to paste here')
+    st.info('Show a reference')
+    df = pd.read_csv('./rough_query.csv', index_col=0)
+    tdf = pd.read_csv('./trend.csv', index_col=0)
+    with st.expander("Show what you've searched"):
+        try:
+            if not df.empty:
+                AgGrid(df, editable=True, fit_columns_on_grid_load=True, )
+            else:
+                st.info('Empty')
+        except Exception:
+            st.error('Error')
+    with st.expander("Show the trend"):
+        try:
+            if not df.empty:
+                AgGrid(tdf, editable=True, fit_columns_on_grid_load=True, )
+            else:
+                st.info('Empty')
+        except Exception:
+            st.error('Error')
+
+
+
 if __name__ == '__main__':
+    industry()
+    refer()
     single_query()

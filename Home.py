@@ -18,7 +18,6 @@ from stock_info import StockInfo, code2cn_name
 st.set_page_config(layout="wide")
 sto = StockInfo(headless=True, fine_update=False, simulate=False)
 
-
 def industry():
     st.header('Classified Draw')
     fdf = sto.fine_industry_df

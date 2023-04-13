@@ -6,14 +6,18 @@
 @Author  : Gan Yuyang
 @Time    : 2023/3/27 18:43
 """
+import time
+
+import requests
 import selenium
 from selenium import webdriver
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service
 from fake_useragent import UserAgent
+
 ua = UserAgent()
 # import selenium.webdriver.
-
+encoding = 'utf-8'
 headers_area = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,"
               "application/signed-exchange;v=b3;q=0.7",
@@ -65,13 +69,42 @@ headers_trade = {
     "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) "
                   "Chrome/111.0.0.0 Mobile Safari/537.36 Edg/111.0.1661.54",
 }
+snowball_index_headers = {
+    "authority": "stock.xueqiu.com",
+    "method": "GET",
+    "path": f"/v5/stock/chart/kline.json?symbol=SH000001&begin={int(time.time() - 30) * 1000 - 100}&period=quarter&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance",
+    "scheme": "https",
+    "accept": "application/json, text/plain, */*",
+    "accept-encoding": "gzip, deflate, br",
+    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+    "cookie": "device_id=3897773bcfd6ac931684ef9745b97bde; s=c91vwicz3n; xq_a_token=173d1b86b97861e4a0ecbe2d031fbd057d337248; xqat=173d1b86b97861e4a0ecbe2d031fbd057d337248; xq_r_token=ee8e80a187bf70af8a22704223d871770297dd64; xq_id_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1aWQiOi0xLCJpc3MiOiJ1YyIsImV4cCI6MTY4Mzg1MTMyOSwiY3RtIjoxNjgxMjczNTQyMjI4LCJjaWQiOiJkOWQwbjRBWnVwIn0.LnMMSCte5yrJhZD3guU8SG9pkd20sOmn4MLhyJSumUth7CBz24xeGrZN0-U3QnsKaxNCyxFsD419yb45fEVt2ZMKaqiAqZ_9NPLn5QGsH3_m6LXZVLl1bDnatUM_7_8hTlJhZ6f1jt2uKAYMFiNW-DradOvThG6zoUBlUWNjpDhY-1hg55GjXZBmJexdO3LkietSNq68ZvX-wCp1gxMHetmuOhC5DPPSAwb5qR8dAkcX-lk_guAUzfJSi7Id94TxI1wx4yy66oaXOgFtBd5nKzf2vnp63I-lMY3M9g9VKP5E0Cq-d4jlCFQesXXoDxbI1NpmNJ3j9J0v-mdt193cSg; u=301681273562329; is_overseas=0",
+    "origin": "https://xueqiu.com",
+    "referer": "https://xueqiu.com/S/SH000001",
+    "sec-ch-ua": "Microsoft Edge;v=111, Not(A:Brand;v=8, Chromium;v=111",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "Windows",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.62",
+}
+
+snowball_simple_headers = {
+    "User-Agent": ua.random
+}
+
+index_name = ['上证指数', '深证成指', '创业板指', '科创50', '上证50', '北证50', '沪深300']
+index_code = ['SH000001', 'SZ399001', 'SZ399006', 'SH000688', 'SH000016', 'BJ899050', 'SH000300']
+
 
 class Driver(object, ):
-    def __init__(self, driver_path=r"D:\Python Projects\Webdriver\msedgedriver.exe", extension_path=None, proxies=None, headless=False):
+    def __init__(self, driver_path=r"D:\Python Projects\Webdriver\msedgedriver.exe", extension_path=None, proxies=None,
+                 headless=False):
         self.driver_path = driver_path
         self.ex_path = extension_path
         self.proxies = proxies
         self.headless = headless
+
     @property
     def blank_driver(self, mute=False):
         # 初始化selenium driver
@@ -107,12 +140,22 @@ class Driver(object, ):
                  }
         self.browser_option.add_experimental_option('prefs', prefs)
         if self.headless:
-            self.browser_option.add_argument('--headless=chrome') # 无头
+            self.browser_option.add_argument('--headless=chrome')  # 无头
         driver = webdriver.Edge(service=Service(self.driver_path),
-                                     options=self.browser_option,
-                                     )
+                                options=self.browser_option,
+                                )
 
         if not mute:
             print('driver initialized')
 
         return driver
+
+
+def snowball_session():
+    session = requests.Session()
+    session.get(url=r"https://xueqiu.com", headers=snowball_simple_headers)
+    return session
+
+
+if __name__ == '__main__':
+    snowball_session()

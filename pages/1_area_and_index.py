@@ -13,9 +13,11 @@ import random
 
 import streamlit as st
 from streamlit_echarts import st_pyecharts
+
+import args
 from stock_info import StockInfo
 import streamlit.components.v1 as components
-
+import json
 st.set_page_config(layout="wide")
 
 sto = StockInfo(headless=True, simulate=False)
@@ -31,9 +33,9 @@ def area_init(update=False):
 
 
 def area_and_index(update=False):
-    col1, col2 = st.columns(2)
 
-    with col1:
+    a, b = st.columns(2)
+    with a:
         st.header('Area Distribution')
         if not update:
             components.html(area_init(), height=500, width=1000,
@@ -41,21 +43,21 @@ def area_and_index(update=False):
         else:
             components.html(sto.draw_area_chart(render=False, df=area_init(update)).render_embed(), height=500, width=1000,
                             scrolling=False)
-    with col2:
+    with b:
         with st.form(key='Index'):
             st.header('Index Query')
             c1, c2 = st.columns(2)
 
-            choice = c1.selectbox('Index', ('sh000001: 上证指数', 'sh000016: 上证50', 'sh000017: 新综指'))
-            option = c2.selectbox('Previous Length (Year)', (1, 2, 3))
-            name_dict = {'sh000001: 上证指数': 'sh000001', 'sh000016: 上证50': 'sh000016',
-                         'sh000017: 新综指': 'sh000017', }
-            code = name_dict.get(choice)
+            choice = c1.selectbox('Index', zip(args.index_name, args.index_code))
+            option = c2.selectbox('Segment', ('day', 'week','month', 'quarter'))
+            # name_dict = {'sh000001: 上证指数': 'sh000001', 'sh000016: 上证50': 'sh000016',
+            #              'sh000017: 新综指': 'sh000017', }
+            # code = name_dict.get(choice)
             sumb = st.form_submit_button('Draw')
             if sumb:
                 st.info(f'Draw {choice} ')
-                st_pyecharts(sto.draw_index(code, render=False, previous=option * 365))
-
+                # st_pyecharts(sto.draw_index(code, render=False, previous=option * 365))
+                components.html(sto.draw_single(index=True, symbol=choice[1],seg=option, render=False).render_embed(), height=600, width=1200)
 
 if __name__ == '__main__':
     area_and_index()
