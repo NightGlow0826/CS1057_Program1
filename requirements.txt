@@ -11,3 +11,4 @@ streamlit==1.20.0
 streamlit_echarts==0.4.0
 tqdm==4.64.0
 streamlit-aggrid==0.3.4.post3
+pyperclip
