@@ -70,13 +70,10 @@ def show():
         name = st.text_input('Input the rough Chinese name of the stock')
         while not name:
             time.sleep(2)
-        # fsb = st.form_submit_button('Submit')
-        # if fsb:
+
         data = zh_search(name)
-        # data = pd.DataFrame()
         data.to_clipboard()
         path = r'./rough_query.csv'
-        # st.write(os.path.exists(path))
         if not os.path.exists(path):
             with open(path, 'w+', encoding='utf-8'):
 

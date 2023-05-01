@@ -81,12 +81,8 @@ def view(cnname, expand=3):
     info = session.get(b, headers=args.snowball_simple_headers)
     info.encoding = 'utf-8'
     content = info.text
-    # with open('1.txt', 'w+', encoding='utf-8') as f:
-    #     f.write(content)
-    # with open('1.txt', 'r+', encoding='utf-8') as f:
-    #     content = f.read()
 
-    # 去除超链接, 图片链接
+    # remove href and images
     content = re.sub(r'<a.*?>', '', content)
     content = re.sub(r'<\a>', '', content)
     content = re.sub(r'<img.*?>', '', content)

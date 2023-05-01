@@ -38,10 +38,7 @@ def trend(top=10, by='volume'):
     rep.encoding = args.encoding
     print(rep.status_code)
     a = rep.text
-    # with open('3.txt', 'w+', encoding=args.encoding) as f:
-    #     f.write(rep.text)
-    # with open('3.txt', 'r', encoding=args.encoding) as f:
-    #     a = f.read()
+
     a = json.loads(a)
     data_dict = a['data']['list']
     cols = list(data_dict[0].keys())
@@ -85,9 +82,7 @@ def trend_show():
     st.subheader('Choose the trend standard')
     by = st.selectbox('Standard', ('volume', 'amount'))
     df = trend(by=by)
-    # fsb = st.form_submit_button('Grab')
 
-        # if fsb:
     with a:
         st_pyecharts(draw_trend(by=by), key='a')
     with b:

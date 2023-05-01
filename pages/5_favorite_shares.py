@@ -14,8 +14,7 @@ import random
 import pandas as pd
 import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-from streamlit_echarts import st_pyecharts
-from streamlit_echarts import Map as st_Map
+
 from stock_info import StockInfo, code2cn_name
 import json
 import streamlit.components.v1 as components
@@ -64,11 +63,8 @@ def select():
     a2.info('After fixing, remember to press Enter')
     with st.form(key='select'):
         data = favorit()
-        # st.write(data)
+
         responce = AgGrid(data, editable=True, fit_columns_on_grid_load=True, )
-        # df_edited = response["data"]
-        # st.write("Edited DataFrame:")
-        # st.dataframe(df_edited)
 
         n = responce['data']
         st.write(n)

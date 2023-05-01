@@ -94,12 +94,6 @@ class StockInfo:
         text = rep.text
         text = repr(text).replace(r'\n', '').replace(r'\t', '').replace(' ', '').replace(r'\r', '').replace(r'\\', '')
 
-        # with open('dust/1.txt', 'w+', encoding='utf-8') as f:
-        #     f.write(text)
-        #
-        # with open('dust/1.txt', 'r', encoding='utf-8') as f:
-        #     rep = f.read()
-        #     t = re.findall(r"\[\\'<atarget.*?]", rep)
 
         t = re.findall(r"\[\\'<atarget.*?]", text)
         for item in t:
@@ -133,7 +127,6 @@ class StockInfo:
             else:
                 province[i] = province[i] + '省'
         c = (
-            # Map(init_opts=opts.InitOpts(width='1500px', height='900px'))
             Map()
                 .add("A股发行数量", [list(z) for z in zip(province, A_shares)], "china",
                      is_map_symbol_show=False,
@@ -146,7 +139,7 @@ class StockInfo:
 
             )
 
-        )  # render 后c成为路径字符串, 不render则是Map()
+        )  # render if not rendered, c is a Map, else a str of path
         if render:
             c.render("./basic_html/area_distribution.html")
 
@@ -157,11 +150,6 @@ class StockInfo:
         rough_industry_df = pd.DataFrame(
             columns=['href', 'industry', 'industry_code', 'share_num', 'total_value', 'ave_pe', 'ave_price'])
 
-        # self.driver().get(self.industry_classify_link)
-        # page_source= self.driver().page_source
-        # with open('trade.html', 'w+', encoding='utf-8') as f:
-        #     f.write(page_source)
-        # quit()
         with open('trade.html', 'r+', encoding='utf-8') as f:
             bs = bs4.BeautifulSoup(f, 'lxml')
         t = bs.find("div", {"class": "sse_colContent js_tradeClassification"})
@@ -200,22 +188,17 @@ class StockInfo:
 
         l = main.find_all_next('tr')
         l = [str(i) for i in l]
-        #     l 的第一个元素是总结
-        # print(l[0])
+
         for field in l[1:]:
             field = str(field)
-            # print(field)
             href = self.prefix + re.findall(r'<a href="(.*?)"', field)[0]
-            # print(href)
             code = href[-3:]
             fine_industry = re.findall(r'blank">(.*?)</a', field)[0]
-            # print(fine_industry)
             digits = re.findall(r'>([\d|\.]+?)<', field)
             digits = [float(i) for i in digits]
             share_num, total_value, ave_pe, ave_prive = digits[:]
             fine_industry_df.loc[
                 l.index(field)] = href, fine_industry, code, share_num, total_value, ave_pe, ave_prive
-            # quit()
         return fine_industry_df
 
     def draw_classify_chart(self, df, render=True):
@@ -255,7 +238,7 @@ class StockInfo:
 
     def code_select(self):
 
-        # 逆向懒得学了, selenium凑合用吧
+        # selenium attempt
         industry_html_folder_path = r'fine_field_html_folder'
         industry_csv_folder_path = r'fine_field_csv_folder'
 
@@ -363,12 +346,7 @@ class StockInfo:
         industry_df = pd.read_csv(f'fine_field_csv_folder/{industry}.csv', index_col=0)
         share_list = industry_df.loc[:, 'share_code'].tolist()
         name_list = industry_df.loc[:, 'name'].tolist()
-        # print(share_list)
-        # print(name_list)
 
-        # df_list = [
-        #     stock_zh_a_hist(symbol=str(i), start_date='2023-01-01', period='daily', adjust='').iloc[-previous:, :6] for
-        #     i in share_list]
         df_list = []
         for i in share_list:
             try:
@@ -378,15 +356,12 @@ class StockInfo:
             except Exception:
                 pass
 
-        # print(type(df_list[0]))
-        # quit()
+
         rise_list = []
         for i in range(len(df_list)):
             df_list[i].columns = ['date', 'open', 'close', 'high', 'low', 'volume', ]
-            # print(df_list[i])
-            # 收盘价的意义更大
+            # choose the close price, since it's more meaningful
             close_ = df_list[i].iloc[0, 2]
-            # print(close_)
             df_list[i][['open', 'close', 'high', 'low']] = df_list[i][['open', 'close', 'high', 'low']].apply(
                 lambda x: x / close_, axis=1)
             rise_list.append(df_list[i].iloc[-1, 2] - df_list[i].iloc[0, 2])
@@ -444,7 +419,7 @@ class StockInfo:
         ohlc = df[['open', 'close', 'low', 'high']]  # oclh结构
         v = df['volume']
         date = df['date'].tolist()
-        data = np.array(ohlc).tolist()  # 通过np转为list
+        data = np.array(ohlc).tolist()  # convert to list through np.array, since cannot convert df to list directly
         volumn = np.array(v).tolist()
 
         return date, data, volumn
@@ -586,7 +561,7 @@ class StockInfo:
         js_code.eval(hk_js_decode)
         dict_list = js_code.call(
             "d", res.text.split("=")[1].split(";")[0].replace('"', "")
-        )  # 执行js解密代码
+        )  # execute js to decipher it
         temp_df = pd.DataFrame(dict_list)
         temp_df["date"] = pd.to_datetime(temp_df["date"]).dt.date
         temp_df["close"] = pd.to_numeric(temp_df["close"])

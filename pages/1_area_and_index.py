@@ -50,13 +50,10 @@ def area_and_index(update=False):
 
             choice = c1.selectbox('Index', zip(args.index_name, args.index_code))
             option = c2.selectbox('Segment', ('day', 'week','month', 'quarter'))
-            # name_dict = {'sh000001: 上证指数': 'sh000001', 'sh000016: 上证50': 'sh000016',
-            #              'sh000017: 新综指': 'sh000017', }
-            # code = name_dict.get(choice)
+
             sumb = st.form_submit_button('Draw')
             if sumb:
                 st.info(f'Draw {choice} ')
-                # st_pyecharts(sto.draw_index(code, render=False, previous=option * 365))
                 components.html(sto.draw_single(index=True, symbol=choice[1],seg=option, render=False).render_embed(), height=600, width=1200)
 
 if __name__ == '__main__':
