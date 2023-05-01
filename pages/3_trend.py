@@ -34,7 +34,7 @@ st.set_page_config(layout="wide")
 def trend(top=10, by='volume'):
     url = f'https://stock.xueqiu.com/v5/stock/screener/quote/list.json?type=sha&order_by={by}&order=desc&size=10&page=1'
     session = args.snowball_session()
-    rep = session.get(url, headers=args.snowball_index_headers)
+    rep = session.get(url, headers=args.snowball_simple_headers)
     rep.encoding = args.encoding
     print(rep.status_code)
     a = rep.text

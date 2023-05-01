@@ -28,7 +28,6 @@ import json
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
 from akshare import stock_zh_a_hist
 # import akshare as ak
 from tqdm import *
@@ -289,48 +288,6 @@ class StockInfo:
             df.to_csv(os.path.join(industry_csv_folder_path, f'{industry_code}.csv'))
             # quit()
 
-    # @property
-    # def historical_macro_df(self):
-    #     # 应该多返回一些
-    #     a_macro_df = pd.DataFrame(columns=['date', 'total', 'total_l', 'vol', 'amount', 'pe', 'turnover', 'turnover_l'])
-    #     date_list = self.hist_date_list(previous=15)
-    #     # date_list = ['2023-03-30']
-    #     self.driver.get(self.historical_link_base + r'day/')
-    #     js = r'document.getElementsByClassName("form-control sse_input")[0].removeAttribute("readonly");'
-    #     # 注入js, 去除只读属性
-    #
-    #     WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, r"form-control.sse_input")))
-    #     time.sleep(2)
-    #     # 等待页面全部加载完成
-    #     self.driver.execute_script(js)
-    #     for date in tqdm(date_list):
-    #         date_input_frame = self.driver.find_element(By.CLASS_NAME, r"form-control.sse_input")
-    #         date_input_frame.clear()
-    #         date_input_frame.send_keys(date)
-    #
-    #         date_input_frame.click()
-    #
-    #         WebDriverWait(self.driver, 10).until(
-    #             EC.presence_of_element_located((By.CLASS_NAME, r"laydate-btns-confirm")))
-    #         confirm_button = self.driver.find_element(By.CLASS_NAME, r'laydate-btns-confirm')
-    #         confirm_button.click()
-    #         time.sleep(1)
-    #         page_source = self.driver.page_source
-    #         bs = bs4.BeautifulSoup(page_source, "lxml")
-    #         tbody = bs.find('tbody')
-    #         rows = tbody.find_all_next('tr')[1:]
-    #         # 第一行是挂牌数, 意义不大
-    #         try:
-    #             total, total_l, vol, amount, pe, turnover, turnover_l = [
-    #                 i.find_all_next('td', {'class': "text-right text-nowrap"})[1].text for i in rows]
-    #         except Exception:
-    #             break
-    #         a_macro_df.loc[date_list.index(date)] = date, total, total_l, vol, amount, pe, turnover, turnover_l
-    #         # print(a_macro_df)
-    #         # quit()
-    #         a_macro_df.to_csv(r'./macro_hist.csv')
-    #
-    #     return a_macro_df
 
     def macro_by_requests(self, previous=60):
         ua = UserAgent()
@@ -462,12 +419,6 @@ class StockInfo:
             c.add_yaxis(f"{name_list[idx]}: {share_list[idx]}", round(df_list[idx]["close"], 4).tolist(),
                         is_selected=False)
 
-        # for i in range(len(df_list)):
-        #     if i in index_list:
-        #         c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist())
-        #     else:
-        #         c.add_yaxis(f"{name_list[i]}: {share_list[i]}", round(df_list[i]["close"], 4).tolist(),
-        #                     is_selected=False)
 
         c.set_global_opts(title_opts=opts.TitleOpts(title=industry_cn_name, subtitle=industry),
                           xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-60)),
@@ -506,10 +457,10 @@ class StockInfo:
             code = 'SZ' + code
         url = f'https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol={code}&begin={int(time.time()) * 1000}&period={seg}&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance'
         session = args.snowball_session()
-        rep = session.get(url, headers=args.snowball_index_headers)
+        rep = session.get(url, headers=args.snowball_simple_headers)
         rep.encoding = 'utf-8'
-        print(rep.url)
-        print(rep.status_code)
+        # print(rep.url)
+        # print(rep.status_code)
         a = rep.text
         l_a = json.loads(a)['data']
 
@@ -646,7 +597,7 @@ class StockInfo:
         url = f'https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol={symbol}&begin={int(time.time()) * 1000}&period={seg}&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance'
         session = args.snowball_session()
 
-        rep = session.get(url, headers=args.snowball_index_headers)
+        rep = session.get(url, headers=args.snowball_simple_headers)
         rep.encoding = 'utf-8'
         print(rep.url)
         print(rep.status_code)
@@ -697,24 +648,3 @@ class StockInfo:
         return c
 
 
-if __name__ == '__main__':
-    s = StockInfo(headless=True)
-    # print(s.historical_macro_df)
-
-    s.draw_macro(render=True, previous=15, update=True)
-    # s.draw_area_chart(render=False)
-    # print(s.fine_industry_df)
-    # s.industry_df_list('A01')
-    # s.draw_industry('A01', render=True, previous=10)
-    # s.draw_classify_chart(s.fine_industry_df, render=True)
-    # s.code_select()
-    # page = Page(layout=Page.DraggablePageLayout)
-    # page.add(s.area_chart)
-    # page.render('temp.html')
-    # print(s.single_query())
-    # s.draw_single(code='601318', previous=50)
-    # r = s.draw_classify_chart(s.rough_industry_df, render=False)
-    # s.draw_index()
-    cols = ' date      open      high       low     close       volume'
-    # put_html(r.render_notebook())
-    # print(s.index_query())
