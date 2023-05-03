@@ -4,5 +4,7 @@ The first program of CS1057. Network and visualization related
 运行
 pip install -r requirements.txt
 来安装依赖库
-在项目目录下打开powershell， 运行 streamlit run Home.py 即可
+在项目目录下打开powershell， 运行 
+streamlit run Home.py
+即可
 
